@@ -2,8 +2,8 @@ name: Check BMVS Appointments
 
 on:
   schedule:
-    # Run every 3 hours
-    - cron: "0 */3 * * *"
+    # Run every 5 minutes — script itself checks if it's 6-8 AM ACST
+    - cron: "*/5 * * * *"
   workflow_dispatch: # Allow manual trigger
 
 jobs:

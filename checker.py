@@ -22,6 +22,7 @@ import time
 import logging
 import smtplib
 import hashlib
+import zoneinfo
 from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -438,10 +439,38 @@ def process_and_alert(slots: list[dict]):
 # Entry point
 # ---------------------------------------------------------------------------
 
+def is_in_check_window() -> bool:
+    """Check if current time is within 6:00–8:00 AM ACST (Darwin time)."""
+    try:
+        acst = zoneinfo.ZoneInfo("Australia/Darwin")
+    except Exception:
+        # Fallback: ACST is UTC+9:30
+        from datetime import timedelta
+        acst = timezone(timedelta(hours=9, minutes=30))
+
+    now = datetime.now(acst)
+    hour = now.hour
+    minute = now.minute
+
+    # Window: 6:00 AM to 7:59 AM (inclusive)
+    in_window = 6 <= hour < 8
+    log.info(
+        f"Darwin time: {now.strftime('%H:%M:%S ACST')} — "
+        f"{'✅ In check window (6-8 AM)' if in_window else '⏸️ Outside window, skipping'}"
+    )
+    return in_window
+
+
 def main():
     log.info("=" * 60)
     log.info("BMVS Appointment Checker — Starting")
-    log.info(f"Time: {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+    log.info(f"Time (UTC): {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}")
+
+    # Only check during 6-8 AM Darwin time
+    if not is_in_check_window():
+        log.info("Outside check window. Exiting.")
+        return
+
     log.info(f"Primary searches: {[s[2] for s in SEARCHES]}")
     log.info(f"Fallback searches: {[s[2] for s in FALLBACK_SEARCHES]}")
     log.info("=" * 60)
