@@ -19,6 +19,7 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: "3.11"
+          cache: "pip"
 
       - name: Quick time check (skip if outside 6-8 AM ACST)
         id: timecheck
@@ -44,11 +45,21 @@ jobs:
                   f.write('in_window=false\n')
           PYEOF
 
+      - name: Cache Playwright browsers
+        if: steps.timecheck.outputs.in_window == 'true'
+        uses: actions/cache@v4
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}
+
       - name: Install dependencies
         if: steps.timecheck.outputs.in_window == 'true'
-        run: |
-          pip install -r requirements.txt
-          playwright install chromium --with-deps
+        run: pip install -r requirements.txt
+
+      - name: Install Chromium (if not cached)
+        if: steps.timecheck.outputs.in_window == 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
+        run: playwright install chromium --with-deps
 
       - name: Check for available appointments
         if: steps.timecheck.outputs.in_window == 'true'
