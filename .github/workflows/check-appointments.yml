@@ -19,14 +19,34 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
+
+      - name: Quick time check (skip if outside 6-8 AM ACST)
+        id: timecheck
+        run: |
+          python -c "
+          from datetime import datetime, timezone, timedelta
+          try:
+              import zoneinfo
+              acst = zoneinfo.ZoneInfo('Australia/Darwin')
+          except Exception:
+              acst = timezone(timedelta(hours=9, minutes=30))
+          now = datetime.now(acst)
+          if 6 <= now.hour < 8:
+              print(f'Darwin time: {now.strftime("%H:%M ACST")} — in window ✅')
+              echo 'in_window=true' >> $GITHUB_OUTPUT
+          else:
+              print(f'Darwin time: {now.strftime("%H:%M ACST")} — outside window, skipping ⏸️')
+              echo 'in_window=false' >> $GITHUB_OUTPUT
+          "
 
       - name: Install dependencies
+        if: steps.timecheck.outputs.in_window == 'true'
         run: |
           pip install -r requirements.txt
           playwright install chromium --with-deps
 
       - name: Check for available appointments
+        if: steps.timecheck.outputs.in_window == 'true'
         env:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
@@ -34,7 +54,7 @@ jobs:
         run: python checker.py
 
       - name: Upload state on failure
-        if: failure()
+        if: failure() && steps.timecheck.outputs.in_window == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: debug-state
