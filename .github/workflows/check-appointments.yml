@@ -1,0 +1,42 @@
+name: Check BMVS Appointments
+
+on:
+  schedule:
+    # Run every 3 hours
+    - cron: "0 */3 * * *"
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium --with-deps
+
+      - name: Check for available appointments
+        env:
+          GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ALERT_RECIPIENT: ${{ secrets.ALERT_RECIPIENT }}
+        run: python checker.py
+
+      - name: Upload state on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-state
+          path: state/
+          retention-days: 7
