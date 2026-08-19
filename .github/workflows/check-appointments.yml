@@ -23,21 +23,26 @@ jobs:
       - name: Quick time check (skip if outside 6-8 AM ACST)
         id: timecheck
         run: |
-          python -c "
+          python3 << 'PYEOF'
           from datetime import datetime, timezone, timedelta
+          import os
           try:
               import zoneinfo
               acst = zoneinfo.ZoneInfo('Australia/Darwin')
           except Exception:
               acst = timezone(timedelta(hours=9, minutes=30))
           now = datetime.now(acst)
+          hour = now.strftime('%H')
+          minute = now.strftime('%M')
           if 6 <= now.hour < 8:
-              print(f'Darwin time: {now.strftime("%H:%M ACST")} — in window ✅')
-              echo 'in_window=true' >> $GITHUB_OUTPUT
+              print('Darwin time: ' + hour + ':' + minute + ' ACST - in window')
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write('in_window=true\n')
           else:
-              print(f'Darwin time: {now.strftime("%H:%M ACST")} — outside window, skipping ⏸️')
-              echo 'in_window=false' >> $GITHUB_OUTPUT
-          "
+              print('Darwin time: ' + hour + ':' + minute + ' ACST - outside window, skipping')
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+                  f.write('in_window=false\n')
+          PYEOF
 
       - name: Install dependencies
         if: steps.timecheck.outputs.in_window == 'true'
