@@ -38,7 +38,7 @@ Add these secrets:
 
 ### 3. Enable GitHub Actions
 
-The workflow runs automatically every 3 hours. You can also trigger it manually:
+The workflow runs automatically every 5 minutes between **6:00 AM and 8:00 AM Darwin time**. You can also trigger it manually:
 
 ```bash
 # Or run locally (not recommended for daily use)
